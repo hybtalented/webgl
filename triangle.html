@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <canvas id="canvas" width="300" height="300"></canvas>
+    <script>
+      window.onload = function () {
+        var canvas = document.getElementById("canvas");
+        /**
+         * @type {WebGLRenderingContext}
+         */
+        var gl = canvas.getContext("webgl");
+        var triangle_source =
+          "attribute vec4 a_Position;" +
+          "void main() {" +
+          "gl_Position = a_Position;" +
+          "}";
+        var fragment_source =
+          "void main() {" + "gl_FragColor = vec4(1.0,0.0,0.0, 1.0);" + "}";
+        var triangle_shader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(triangle_shader, triangle_source);
+        gl.compileShader(triangle_shader);
+
+        var fragment_shader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragment_shader, fragment_source);
+        gl.compileShader(fragment_shader);
+        const shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, triangle_shader);
+        gl.attachShader(shaderProgram, fragment_shader);
+        gl.linkProgram(shaderProgram);
+        gl.useProgram(shaderProgram);
+
+        var a_Position = gl.getAttribLocation(shaderProgram, "a_Position");
+        if (a_Position < 0) {
+          console.log("fail to get attibute a_Position");
+          return;
+        }
+        var n = initBuffers(gl, shaderProgram);
+        if (n < 0) {
+          console.log("failed to init vertice buffer");
+          return;
+        }
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, n);
+        function initBuffers() {
+          var vertices = new Float32Array([-0.5, -.0, 1, 1, 1, -1]);
+          var n = 3;
+          var vertices_buffer = gl.createBuffer();
+          if (!vertices_buffer) {
+            console.log("Failed to create a buffer");
+            return -1;
+          }
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertices_buffer);
+          gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+          gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0);
+          gl.enableVertexAttribArray(a_Position);
+          return n;
+        }
+      };
+    </script>
+  </body>
+</html>

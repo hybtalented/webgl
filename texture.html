@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="./texture_base64.js"></script>
+  </head>
+  <body>
+    <canvas
+      id="canvas"
+      width="600"
+      height="600"
+      style="border: 2px solid #000"
+    ></canvas>
+
+    <script>
+      function cubeGenerator(center, size) {
+        for (var i = i; i < 3; ++i) {}
+      }
+      window.onload = function () {
+        var rotation_z = Math.PI / 4;
+        var rotation_y = 0;
+        var translate_step = 0.2;
+        var rotate_angle_step = 0.02;
+        var key_s = false,
+          key_w = false,
+          key_a = false,
+          key_d = false,
+          key_q = false,
+          key_e = false;
+        document.addEventListener("keydown", function (event) {
+          switch (event.key) {
+            case "s":
+            case "S":
+              key_s = true;
+              break;
+            case "w":
+            case "W":
+              key_w = true;
+              break;
+            case "a":
+            case "A":
+              key_a = true;
+              break;
+            case "d":
+            case "D":
+              key_d = true;
+              break;
+            case "q":
+            case "Q":
+              key_q = true;
+              break;
+            case "e":
+            case "E":
+              key_e = true;
+              break;
+          }
+        });
+        document.addEventListener("keyup", function (event) {
+          switch (event.key) {
+            case "s":
+            case "S":
+              key_s = false;
+              break;
+            case "w":
+            case "W":
+              key_w = false;
+              break;
+            case "a":
+            case "A":
+              key_a = false;
+              break;
+            case "d":
+            case "D":
+              key_d = false;
+              break;
+            case "q":
+            case "Q":
+              key_q = false;
+              break;
+            case "e":
+            case "E":
+              key_e = false;
+              break;
+          }
+        });
+        var translation = [0.1, 0.1, 0.0, 0.0];
+        function startAnimation() {
+          var translate = gl.getUniformLocation(shaderProgram, "translate");
+          if (key_s) {
+            translation[1] -= rotate_angle_step;
+          }
+          if (key_w) {
+            translation[1] += rotate_angle_step;
+          }
+          if (key_a) {
+            translation[0] -= rotate_angle_step;
+          }
+          if (key_d) {
+            translation[0] += rotate_angle_step;
+          }
+          if (key_q) {
+            rotation_z -= 0.01;
+            rotation_y = 0;
+          }
+          if (key_e) {
+            rotation_z += 0.01;
+            rotation_y = 0;
+          }
+          gl.uniform4f(
+            translate,
+            translation[0],
+            translation[1],
+            translation[2],
+            translation[3]
+          );
+          var rotate_z = gl.getUniformLocation(shaderProgram, "rotate_z"),
+            rotate_y = gl.getUniformLocation(shaderProgram, "rotate_y");
+          var sin_angle_z = Math.sin(rotation_z),
+            cos_angle_z = Math.cos(rotation_z),
+            sin_angle_y = Math.sin(rotation_y),
+            cos_angle_y = Math.cos(rotation_y);
+          var rotate_matrix_z = new Float32Array([
+              cos_angle_z,
+              -sin_angle_z,
+              0,
+              0,
+              sin_angle_z,
+              cos_angle_z,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+            ]),
+            rotate_matrix_y = new Float32Array([
+              cos_angle_y,
+              0,
+              -sin_angle_y,
+              0,
+              0,
+              1,
+              0,
+              0,
+              sin_angle_y,
+              0,
+              cos_angle_y,
+              0,
+              0,
+              0,
+              0,
+              1,
+            ]);
+          gl.uniformMatrix4fv(rotate_z, false, rotate_matrix_z);
+          gl.uniformMatrix4fv(rotate_y, false, rotate_matrix_y);
+          rotation_y += rotate_angle_step;
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, n);
+          requestAnimationFrame(startAnimation);
+        }
+        var canvas = document.getElementById("canvas");
+        /**
+         * @type {WebGLRenderingContext}
+         */
+        var gl = canvas.getContext("webgl");
+        gl.cullFace(gl.BACK);
+        // gl.enable(gl.CULL_FACE);// CULL意为“剔除”
+        var triangle_source =
+          "attribute vec4 a_Position;" +
+          "attribute vec2 a_TexCoord;" +
+          "varying vec2 v_TexCoord;" +
+          "uniform vec4 translate;" +
+          "uniform mat4 rotate_z;" +
+          "uniform mat4 rotate_y;" +
+          "void main() {" +
+          //   "gl_Position =  a_Position;" +
+          "gl_Position =  rotate_y * rotate_z * a_Position + translate;" +
+          "v_TexCoord = a_TexCoord;" +
+          "}";
+        var fragment_source =
+          "precision mediump float;" +
+          "varying vec2 v_TexCoord;" +
+          "uniform sampler2D u_Sampler;" +
+          "void main() {" +
+          "gl_FragColor = texture2D(u_Sampler, v_TexCoord);" +
+          "}";
+        var triangle_shader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(triangle_shader, triangle_source);
+        gl.compileShader(triangle_shader);
+
+        var fragment_shader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragment_shader, fragment_source);
+        gl.compileShader(fragment_shader);
+        const shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, triangle_shader);
+        gl.attachShader(shaderProgram, fragment_shader);
+
+        if (n < 0) {
+          console.log("failed to init vertice buffer");
+          return;
+        }
+        gl.linkProgram(shaderProgram);
+        gl.useProgram(shaderProgram);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        var a_Position = gl.getAttribLocation(shaderProgram, "a_Position");
+        if (a_Position < 0) {
+          console.log("fail to get attibute a_Position");
+          return;
+        }
+        var a_TexCoord = gl.getAttribLocation(shaderProgram, "a_TexCoord");
+        if (a_TexCoord < 0) {
+          console.log("fail to get attibute a_TexCoord");
+          return;
+        }
+
+        var n = initBuffers();
+        initTexture(n);
+
+        function initTexture(n) {
+          var u_Sampler = gl.getUniformLocation(shaderProgram, "u_Sampler");
+          var image = new Image();
+          image.onload = function loadTexture() {
+            document.body.append(image);
+            var texture = gl.createTexture();
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(
+              gl.TEXTURE_2D,
+              gl.TEXTURE_WRAP_S,
+              gl.CLAMP_TO_EDGE
+            );
+
+            gl.texParameteri(
+              gl.TEXTURE_2D,
+              gl.TEXTURE_WRAP_T,
+              gl.CLAMP_TO_EDGE
+            );
+            gl.texImage2D(
+              gl.TEXTURE_2D,
+              0,
+              gl.RGBA,
+              gl.RGBA,
+              gl.UNSIGNED_BYTE,
+              image
+            );
+
+            gl.uniform1i(u_Sampler, 0);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            startAnimation();
+          };
+          image.src = texture_base64;
+        }
+        function initBuffers() {
+          var vertices = new Float32Array(
+            [
+              [-0.5, 0.5, 0.0, 1.0],
+              [-0.5, -0.5, 0.0, 0.0],
+              [0.5, 0.5, 1.0, 1.0],
+              [0.5, -0.5, 1.0, 0.0],
+            ].flat()
+          );
+          var ElementSize = vertices.BYTES_PER_ELEMENT;
+          var n = 4;
+          var vertices_buffer = gl.createBuffer();
+          if (!vertices_buffer) {
+            console.log("Failed to create a buffer");
+            return -1;
+          }
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertices_buffer);
+          gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+          gl.vertexAttribPointer(
+            a_Position,
+            2,
+            gl.FLOAT,
+            false,
+            ElementSize * 4,
+            0
+          );
+          gl.enableVertexAttribArray(a_Position);
+          gl.vertexAttribPointer(
+            a_TexCoord,
+            2,
+            gl.FLOAT,
+            false,
+            ElementSize * 4,
+            ElementSize * 2
+          );
+          gl.enableVertexAttribArray(a_TexCoord);
+          return n;
+        }
+      };
+    </script>
+  </body>
+</html>
