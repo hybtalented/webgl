@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script src="./texture_base64.js"></script>
+    <script src="../js/texture_base64.js"></script>
   </head>
   <body>
     <canvas
@@ -170,6 +170,11 @@
          */
         var gl = canvas.getContext("webgl");
         gl.cullFace(gl.BACK);
+        // 开启深度测试
+        gl.enable(gl.DEPTH_TEST);
+
+        // 清空颜色和深度缓冲区
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         // gl.enable(gl.CULL_FACE);// CULL意为“剔除”
         var triangle_source =
           "attribute vec4 a_Position;" +
@@ -207,7 +212,6 @@
         }
         gl.linkProgram(shaderProgram);
         gl.useProgram(shaderProgram);
-        gl.clear(gl.COLOR_BUFFER_BIT);
         var a_Position = gl.getAttribLocation(shaderProgram, "a_Position");
         if (a_Position < 0) {
           console.log("fail to get attibute a_Position");
