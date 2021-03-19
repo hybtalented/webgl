@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGL Cube with animation</title>
+    <script src="../js/cuon-matrix.js"></script>
+  </head>
+  <body>
+    <canvas
+      id="canvas"
+      width="600"
+      height="600"
+      style="border: 2px solid #000"
+    ></canvas>
+
+    <script>
+      function cubeGenerator(center, size) {
+        var min_x = center[0] - size[0] / 2,
+          max_x = center[0] + size[0] / 2;
+        var min_y = center[1] - size[1] / 2,
+          max_y = center[1] + size[1] / 2;
+        var min_z = center[2] - size[2] / 2,
+          max_z = center[2] + size[2] / 2;
+        /************************************************************
+         *   4 - 5
+         *  /|  /|     z
+         * 7 - 6 |     |__ y
+         * | | | |     /
+         * | 0 - 1    x
+         * |/  |/
+         * 3 - 2
+         ***********************************************************/
+        var vertices = [
+          [min_x, min_y, min_z],
+          [min_x, max_y, min_z],
+          [max_x, max_y, min_z],
+          [max_x, min_y, min_z],
+          [min_x, min_y, max_z],
+          [min_x, max_y, max_z],
+          [max_x, max_y, max_z],
+          [max_x, min_y, max_z],
+        ];
+        var indices = [
+          [0, 1, 2],
+          [0, 2, 3],
+          [3, 2, 6],
+          [3, 6, 7],
+          [2, 1, 5],
+          [2, 5, 6],
+          [1, 0, 4],
+          [1, 4, 5],
+          [0, 3, 7],
+          [0, 7, 4],
+          [7, 6, 5],
+          [7, 5, 4],
+        ];
+        return { vertices, indices };
+      }
+      window.onload = function () {
+        var context = {
+          keyboard: {
+            key_s: false,
+            key_w: false,
+            key_a: false,
+            key_d: false,
+            key_q: false,
+            key_e: false,
+          },
+          model: {
+            rotation: {
+              z: 45,
+              y: 0,
+            },
+            translation: {
+              x: 0,
+              y: 0,
+              z: 0,
+            },
+          },
+        };
+        var translate_step = 0.2;
+        var rotate_angle_step = 1;
+
+        document.addEventListener("keydown", function (event) {
+          switch (event.key) {
+            case "s":
+            case "S":
+              context.keyboard.key_s = true;
+              break;
+            case "w":
+            case "W":
+              context.keyboard.key_w = true;
+              break;
+            case "a":
+            case "A":
+              context.keyboard.key_a = true;
+              break;
+            case "d":
+            case "D":
+              context.keyboard.key_d = true;
+              break;
+            case "q":
+            case "Q":
+              context.keyboard.key_q = true;
+              break;
+            case "e":
+            case "E":
+              context.keyboard.key_e = true;
+              break;
+          }
+        });
+        document.addEventListener("keyup", function (event) {
+          switch (event.key) {
+            case "s":
+            case "S":
+              context.keyboard.key_s = false;
+              break;
+            case "w":
+            case "W":
+              context.keyboard.key_w = false;
+              break;
+            case "a":
+            case "A":
+              context.keyboard.key_a = false;
+              break;
+            case "d":
+            case "D":
+              context.keyboard.key_d = false;
+              break;
+            case "q":
+            case "Q":
+              context.keyboard.key_q = false;
+              break;
+            case "e":
+            case "E":
+              context.keyboard.key_e = false;
+              break;
+          }
+        });
+        var translation = [0.1, 0.1, 0.0];
+        function setMvpMatrix(context) {
+          var u_mvp_matrix = gl.getUniformLocation(
+            shaderProgram,
+            "u_mvp_matrix"
+          );
+          if (!u_mvp_matrix) {
+            console.log("unable to find mvpmatrix location u_mvp_matrix");
+            return;
+          }
+
+          var modelMatrix = new Matrix4();
+          modelMatrix
+            .setTranslate(
+              context.model.translation.x,
+              context.model.translation.y,
+              context.model.translation.z
+            )
+            .rotate(context.model.rotation.y, 0, 1, 0)
+            .rotate(context.model.rotation.z, 0, 0, 1);
+          var viewMatrix = new Matrix4();
+          viewMatrix.setLookAt(0, 0, 10, 0, 0, -100, 0, 1, 1);
+          var projMatrix = new Matrix4();
+          projMatrix.setPerspective(30, canvas.width / canvas.height, 1, 100);
+          var mvp_matrix = new Matrix4();
+          mvp_matrix.set(projMatrix).multiply(viewMatrix).multiply(modelMatrix);
+          gl.uniformMatrix4fv(u_mvp_matrix, false, mvp_matrix.elements);
+        }
+
+        function startAnimation() {
+          if (context.keyboard.key_s) {
+            context.model.translation.z -= translate_step;
+          }
+          if (context.keyboard.key_w) {
+            context.model.translation.z += translate_step;
+          }
+          if (context.keyboard.key_a) {
+            context.model.translation.x -= translate_step;
+          }
+          if (context.keyboard.key_d) {
+            context.model.translation.x += translate_step;
+          }
+          if (context.keyboard.key_q) {
+            context.model.rotation.z -= rotate_angle_step;
+            context.model.rotation.y = 0;
+          }
+          if (context.keyboard.key_e) {
+            context.model.rotation.z += rotate_angle_step;
+            context.model.rotation.y = 0;
+          }
+          context.model.rotation.y += rotate_angle_step;
+          setMvpMatrix(context);
+          gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0);
+          requestAnimationFrame(startAnimation);
+        }
+        var canvas = document.getElementById("canvas");
+        /**
+         * @type {WebGLRenderingContext}
+         */
+        var gl = canvas.getContext("webgl");
+        gl.cullFace(gl.BACK);
+
+        // 开启深度测试
+        gl.enable(gl.DEPTH_TEST);
+
+        // 清空颜色和深度缓冲区
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.CULL_FACE);// CULL意为“剔除”
+        var triangle_source =
+          "attribute vec4 a_Position;" +
+          "attribute vec4 a_Color;" +
+          "varying vec4 v_Color;" +
+          "uniform mat4 u_mvp_matrix;" +
+          "void main() {" +
+          //   "gl_Position =  a_Position;" +
+          "gl_Position =  u_mvp_matrix * a_Position;" +
+          "v_Color = a_Color;" +
+          "}";
+        var fragment_source =
+          "precision mediump float;" +
+          "varying vec4 v_Color;" +
+          "void main() {" +
+          "gl_FragColor = v_Color;" +
+          "}";
+        var triangle_shader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(triangle_shader, triangle_source);
+        gl.compileShader(triangle_shader);
+
+        var fragment_shader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragment_shader, fragment_source);
+        gl.compileShader(fragment_shader);
+        const shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, triangle_shader);
+        gl.attachShader(shaderProgram, fragment_shader);
+
+        if (n < 0) {
+          console.log("failed to init vertice buffer");
+          return;
+        }
+        gl.linkProgram(shaderProgram);
+        gl.useProgram(shaderProgram);
+        var a_Position = gl.getAttribLocation(shaderProgram, "a_Position");
+        if (a_Position < 0) {
+          console.log("fail to get attibute a_Position");
+          return;
+        }
+        var a_Color = gl.getAttribLocation(shaderProgram, "a_Color");
+        if (a_Color < 0) {
+          console.log("fail to get attibute a_Color");
+          return;
+        }
+
+        var n = initBuffers();
+        startAnimation();
+        function initBuffers() {
+          var { vertices: points, indices: triangles } = cubeGenerator(
+            [0, 0, 0],
+            [1, 1, 1]
+          );
+          var min = [-0.5, -0.5, -0.5],
+            max = [0.5, 0.5, 0.5];
+          for (var i = 0; i < points.length; ++i) {
+            points[i] = points[i].concat(
+              points[i].map(
+                (value, index) =>
+                  0.2 + ((value - min[index]) * 0.6) / (max[index] - min[index])
+              )
+            );
+          }
+          var n = triangles.flat().length;
+          var vertices = new Float32Array(points.flat());
+
+          var ElementSize = vertices.BYTES_PER_ELEMENT;
+          var indices = new Uint8Array(triangles.flat());
+          var vertices_buffer = gl.createBuffer();
+          if (!vertices_buffer) {
+            console.log("Failed to create a buffer");
+            return -1;
+          }
+          var indices_buffer = gl.createBuffer();
+          if (!indices_buffer) {
+            console.log("Failed to create a buffer");
+            return -1;
+          }
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices_buffer);
+          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+          gl.bindBuffer(gl.ARRAY_BUFFER, vertices_buffer);
+          gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+          gl.vertexAttribPointer(
+            a_Position,
+            3,
+            gl.FLOAT,
+            false,
+            ElementSize * 6,
+            0
+          );
+          gl.enableVertexAttribArray(a_Position);
+          gl.vertexAttribPointer(
+            a_Color,
+            3,
+            gl.FLOAT,
+            true,
+            ElementSize * 6,
+            ElementSize * 3
+          );
+          gl.enableVertexAttribArray(a_Color);
+          return n;
+        }
+      };
+    </script>
+  </body>
+</html>
