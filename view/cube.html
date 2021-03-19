@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebGL Cube with animation</title>
+    <title>WebGL Cube with animation, move or rotate with key Q、W、E、A、S、D，scale with mousewheel</title>
     <script src="../js/cuon-matrix.js"></script>
   </head>
   <body>
@@ -69,6 +69,7 @@
             key_e: false,
           },
           model: {
+            scale: 1,
             rotation: {
               z: 45,
               y: 0,
@@ -82,7 +83,14 @@
         };
         var translate_step = 0.2;
         var rotate_angle_step = 1;
-
+        document.addEventListener("mousewheel", function (event) {
+          if (event.wheelDelta > 0) {
+            context.model.scale *= 1.1;
+          } else {
+            context.model.scale /= 1.1;
+            1;
+          }
+        });
         document.addEventListener("keydown", function (event) {
           switch (event.key) {
             case "s":
@@ -157,6 +165,11 @@
               context.model.translation.y,
               context.model.translation.z
             )
+            .scale(
+              context.model.scale,
+              context.model.scale,
+              context.model.scale
+            )
             .rotate(context.model.rotation.y, 0, 1, 0)
             .rotate(context.model.rotation.z, 0, 0, 1);
           var viewMatrix = new Matrix4();
@@ -206,7 +219,7 @@
 
         // 清空颜色和深度缓冲区
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.enable(gl.CULL_FACE);// CULL意为“剔除”
+        gl.enable(gl.CULL_FACE); // CULL意为“剔除”
         var triangle_source =
           "attribute vec4 a_Position;" +
           "attribute vec4 a_Color;" +
