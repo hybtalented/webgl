@@ -336,7 +336,6 @@ class BasicAnimation {
     if (context.keyboard.key_d) {
       context.model.rotation.y += rotate_angle_step;
     }
-    // context.model.rotation.y += rotate_angle_step;
     this.setMvpMatrix(context);
     this._gl.drawElements(
       this._gl.TRIANGLES,
