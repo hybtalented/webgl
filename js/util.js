@@ -381,10 +381,59 @@ class DEMLoader {
       this.cube.add(new Vector3(data[i]));
     }
     this.data = data;
-    this.loadTriangle();
+    this.triangles = this.loadTriangle();
     return (this.valid = true);
   }
+  /**
+   *
+   * @param {WebGLRenderingContext} gl 渲染上下文
+   * @param {string} texture_image 纹理图片
+   * @param {{format:number, id: number, location: WebGLUniformLocation}} options
+   */
+  async loadTextrue(gl, texture_image, options) {
+    const merged_option = Object.assign({ id: 0, format: gl.RGB }, options);
+    const { id } = merged_option;
+    if (!options.location) {
+      console.warn("sampler location must be defined in options");
+      return [];
+    }
+    return new Promise((resolve) => {
+      var image = new Image();
+      image.onload = () => {
+        var texture = gl.createTexture();
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+        gl.activeTexture(gl[`TEXTURE${id}`]);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          merged_option.format,
+          merged_option.format,
+          gl.UNSIGNED_BYTE,
+          image
+        );
+        gl.uniform1i(merged_option.location, id);
+        const max = this.cube.max.elements;
+        const min = this.cube.min.elements;
+        resolve(
+          this.data.map((vertex) =>
+            vertex
+              .slice(0, 3)
+              .concat([
+                (vertex[0] - min[0]) / (max[0] - min[0]),
+                (vertex[1] - min[1]) / (max[1] - min[1]),
+              ])
+          )
+        );
+      };
+      image.src = texture_image;
+    });
+  }
   loadTriangle() {
     /**
      *    i,j -- i+1,j
@@ -408,7 +457,7 @@ class DEMLoader {
         ]);
       }
     }
-    this.triangles = indices;
+    return indices;
   }
   get vertices() {
     return this.col * this.row;
