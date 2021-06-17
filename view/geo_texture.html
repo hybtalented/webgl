@@ -85,7 +85,7 @@
                 console.log("fail to get attibute a_texCoord");
                 return;
             }
-            var texture_data = await dem.loadTextrue(gl, dem_texture_image, {
+            var texture_data = await dem.loadTexture(gl, dem_texture_image, {
                 location: gl.getUniformLocation(shaderProgram, "u_Sampler")
             });
             var n = initBuffers();
