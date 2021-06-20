@@ -19,9 +19,11 @@
             <form class="setting" name="光线设置">
                 <div name="垂直角" class="setting-item">
                     <input value="30" oninput="setLight()" type="range" step="1" min="0" max="90"></input>
+                    <div class="angle">30</div>
                 </div>
                 <div name="水平角" class="setting-item">
                     <input value="315" oninput="setLight()" type="range" step="1" min="0" max="360"></input>
+                    <div class="angle">315</div>
                 </div>
             </form>
         </div>
@@ -171,12 +173,17 @@
                 const sphere = Sphere.fromCube(dem.cube);
                 mvpMatrixFromLight.initializeByBoundSphere(sphere, OFFSCREEN_WIDTH /
                     OFFSCREEN_HEIGHT);
+                const theta_form = document.querySelector(".setting-item[name='垂直角']");
+                const phi_form = document.querySelector(".setting-item[name='水平角']");
 
                 function setLight() {
-                    const theta = parseInt(document.querySelector(".setting-item[name='垂直角'] input").value,
+
+                    const theta = parseInt(theta_form.querySelector('input').value,
                         10);
-                    const phi = parseInt(document.querySelector(".setting-item[name='水平角'] input").value,
+                    const phi = parseInt(phi_form.querySelector('input').value,
                         10);
+                    theta_form.querySelector('div').innerText = theta;
+                    phi_form.querySelector('div').innerText = phi;
                     const lightDirection = getLight(theta, phi);
                     mvpMatrixFromLight.view.origin = lightDirection.elements.map((e) =>
                         e * sphere.radius * 2.1

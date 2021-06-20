@@ -26,7 +26,3 @@
 .setting .setting-item:before {
   content: attr(name);
 }
-
-input[type="range"]:after {
-  content: attr(value);
-}
