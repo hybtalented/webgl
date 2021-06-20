@@ -9,13 +9,12 @@
     <script type="text/javascript" src="../js/cuon-matrix.js"></script>
     <script type="text/javascript" src="../js/util.js"></script>
     <script type="text/javascript" src="../js/dem_with_texture.js"></script>
+    <script type="text/javascript" src="../js/webgl_wrapper.js"></script>
 </head>
 
-<body>
-
-    <canvas id="canvas" width="1920" height="1080"></canvas>
+<body style="overflow: hidden;">
+    <canvas id="canvas" width="1920" height="800"></canvas>
     <script type="text/javascript">
-        let animation;
         window.onload = async function () {
             /**
              * @type {HTMLCanvasElement}
@@ -25,6 +24,8 @@
             gl.cullFace(gl.BACK);
             gl.enable(gl.DEPTH_TEST)
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            const OFFSCREEN_WIDTH = 1920;
+            const OFFSCREEN_HEIGHT = 1080;
             var frameVShaderSource =
                 "attribute vec4 a_Position;" +
                 "uniform mat4 u_mvpMatrix;" +
@@ -84,6 +85,7 @@
                 'float nDotL = max(dot(normal, u_lightDirection), 0.0);' +
                 'vec3 diffUse = u_diffUseLight * geoTexture.rgb * nDotL;' +
                 'vec3 ambient = u_ambientLight * geoTexture.rgb;' +
+                // 'gl_FragColor = geoTexture;' +
                 'gl_FragColor = vec4((diffUse + ambient) * visibility, geoTexture.a);' +
                 "}";
 
@@ -99,16 +101,43 @@
                 return;
             }
 
-            initFrameBuffer();
-            // 初始化缓冲区数据
-            initBufferData();
 
-            if (!animation) {
-                animation = new BasicAnimation(gl, canvas);
+            let framebuffer = initFrameBuffer();
+            // 初始化缓冲区数据
+            const n_points = await initBufferData();
+            const animation = new WebGLBasicAnimation(document, (mvpMatrix) => {
+                // 将渲染缓冲区设置到帧缓冲区
+                framebuffer.bind();
+                gl.clearColor(0.2, 0.2, 0.4, 1.0); // Set clear color (the color is slightly changed)
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // Clear FBO
+                frameProgram.use();
+                gl.drawElements(gl.TRIANGLES, n_points, gl.UNSIGNED_SHORT, 0);
+                // 将渲染缓冲区设置为canvas
+                framebuffer.unbind();
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                gl.clearColor(0.0, 0.0, 0.0, 0.0);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                drawProgram.use();
+                gl.uniformMatrix4fv(drawProgram.u_mvpMatrix, false, mvpMatrix.elements);
+                gl.drawElements(gl.TRIANGLES, n_points, gl.UNSIGNED_SHORT, 0);
+            }, dem.cube);
+            animation.initializeByBoundCube(dem.cube, canvas.width / canvas.height);
+            animation.start();
+
+            function getLight(theta, phi) {
+                // 球坐标系下的仰角
+                const fTheta = theta / 180 * Math.PI;
+                // 求坐标系下的水平角
+                const fPhi = phi / 180 * Math.PI;
+                const lightDirection = new Vector3([Math.cos(fTheta) * Math.cos(fPhi), Math.cos(fTheta) * Math
+                    .sin(fPhi), Math.sin(fTheta)
+                ]);
+                lightDirection.normalize();
+                return lightDirection;
             }
 
             function initFrameBuffer() {
-                const frameBuffer = new WebGLFrameBufferWrapper(gl, 400, 400);
+                const framebuffer = new WebGLFrameBufferWrapper(gl, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
                 framebuffer.bind();
                 // 将帧缓冲区颜色关联对象板顶的纹理1
                 const depthTexture = new WebGLTextureWrapper(gl, gl.RGBA);
@@ -116,11 +145,22 @@
                 depthTexture.bind(1);
                 depthTexture.setParams();
                 depthTexture.bindFramebuffer(framebuffer, gl.COLOR_ATTACHMENT0);
-
+                framebuffer.status();
                 framebuffer.unbind();
+                return framebuffer;
             }
 
-            function initBufferData() {
+            async function initBufferData() {
+
+                const lightDirection = getLight(30, 315);
+                const mvpMatrixFromLight = new WebGLMVPMatrixWrapper();
+                mvpMatrixFromLight.projectionType = "orthogonal";
+                const sphere = Sphere.fromCube(dem.cube);
+                mvpMatrixFromLight.initializeByBoundSphere(sphere, OFFSCREEN_WIDTH /
+                    OFFSCREEN_HEIGHT);
+                mvpMatrixFromLight.view.origin = lightDirection.elements.map((e) =>
+                    e * sphere.radius * 2.1
+                );
                 const vertices = await dem.loadTexture(gl, dem_texture_image, {
                     id: 0,
                     with_normal: true
@@ -131,30 +171,39 @@
                 vertexBuffer.init(gl.STATIC_DRAW, new Float32Array(vertices.flat()), 8);
 
 
-                const indiceData = new Uint16Array(trangles.flat());
                 const elementsBuffer = new WebGLBufferWrapper(gl, gl.ELEMENT_ARRAY_BUFFER);
+                const {
+                    triangles
+                } = dem;
+                const indiceData = new Uint16Array(triangles.flat());
                 elementsBuffer.bind();
                 elementsBuffer.init(gl.STATIC_DRAW, new Uint16Array(indiceData));
-
 
                 drawProgram.use();
 
                 // 绑定纹理
                 gl.uniform1i(drawProgram.u_samplerGeo, 0);
-                gl.uniformli(drawProgram.u_samplerDepth, 1);
+                gl.uniform1i(drawProgram.u_samplerDepth, 1);
                 vertexBuffer.bindAttibute(drawProgram.a_Position, 3, gl.FLOAT);
                 vertexBuffer.bindAttibute(drawProgram.a_Normal, 3, gl.FLOAT, 3);
                 vertexBuffer.bindAttibute(drawProgram.a_texCoord, 2, gl.FLOAT, 6);
-
-                const {
-                    trangles
-                } = dem;
-
+                // 漫反射光颜色
+                gl.uniform3f(drawProgram.u_diffUseLight, 1.0, 1.0, 1.0);
+                // 平行光方向
+                gl.uniform3fv(drawProgram.u_lightDirection, lightDirection.elements);
+                // 环境光颜色
+                gl.uniform3f(drawProgram.u_ambientLight, 0.2, 0.2, 0.2);
+                debugger
+                gl.uniformMatrix4fv(drawProgram.u_mvpMatrixFromLight, false, mvpMatrixFromLight.matrix
+                    .elements)
                 frameProgram.use();
-                vertexBuffer.bindAttibute(drawProgram.a_Position, 3, gl.FLOAT);
 
-                elementsBuffer.unbind();
+                vertexBuffer.bindAttibute(frameProgram.a_Position, 3, gl.FLOAT);
+                // 设置为光源坐标系
+                gl.uniformMatrix4fv(frameProgram.u_mvpMatrix, false, mvpMatrixFromLight.matrix.elements)
+
                 vertexBuffer.unbind();
+                return elementsBuffer.size;
             }
         }
     </script>

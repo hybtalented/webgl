@@ -10,6 +10,7 @@
         Q、W、E、A、S、D，scale with mousewheel
     </title>
     <script src="../js/cuon-matrix.js"></script>
+    <script src="../js/webgl_wrapper.js"></script>
     <script src="../js/util.js"></script>
     <script src="../js/dem_with_texture.js"></script>
 </head>
@@ -111,8 +112,8 @@
                 y: center[1],
                 z: center[2]
             }
-            animation.context.eye.origin = [0, 0, size[2] * 3 + min[2]];
-            animation.context.eye.target = [0, 0, min[2] - size[2] * 6];
+            animation.context.eye.origin = [0, 0, size[2] * 2 + min[2]];
+            animation.context.eye.target = [0, 0, 0];
             animation.context.project.options.foxy = 60;
             animation.context.project.options.far = size[2] * 10;
             animation.context.project.options.near = size[2] * 0.1;
