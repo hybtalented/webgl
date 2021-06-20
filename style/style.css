@@ -1,0 +1,32 @@
+.layout {
+  height: 100em;
+  width: 100em;
+  display: flex;
+  flex-direction: row;
+}
+
+.layout .sider {
+  display: inline-block;
+  width: 15%;
+  height: 100%;
+  background-color: cornflowerblue;
+  color: white;
+}
+
+.layout .content {
+  display: inline-block;
+  width: 85%;
+  height: 100%;
+}
+
+.setting::before {
+  display: block;
+  content: attr(name);
+}
+.setting .setting-item:before {
+  content: attr(name);
+}
+
+input[type="range"]:after {
+  content: attr(value);
+}

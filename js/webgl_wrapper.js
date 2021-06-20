@@ -422,7 +422,6 @@ class WebGLMVPMatrixWrapper {
    * @returns
    */
   get matrix() {
-    debugger;
     const { projection, model, view } = this;
     var modelMatrix = new Matrix4();
     modelMatrix

@@ -10,10 +10,25 @@
     <script type="text/javascript" src="../js/util.js"></script>
     <script type="text/javascript" src="../js/dem_with_texture.js"></script>
     <script type="text/javascript" src="../js/webgl_wrapper.js"></script>
+    <link rel="stylesheet" type="text/css" href="../style/style.css" />
 </head>
 
 <body style="overflow: hidden;">
-    <canvas id="canvas" width="1920" height="800"></canvas>
+    <div class="layout">
+        <div class="sider">
+            <form class="setting" name="光线设置">
+                <div name="垂直角" class="setting-item">
+                    <input value="30" oninput="setLight()" type="range" step="1" min="0" max="90"></input>
+                </div>
+                <div name="水平角" class="setting-item">
+                    <input value="315" oninput="setLight()" type="range" step="1" min="0" max="360"></input>
+                </div>
+            </form>
+        </div>
+        <div class="content">
+            <canvas id="canvas" style="width:100%;" width="1920" height="800"></canvas>
+        </div>
+    </div>
     <script type="text/javascript">
         window.onload = async function () {
             /**
@@ -151,16 +166,31 @@
             }
 
             async function initBufferData() {
-
-                const lightDirection = getLight(30, 315);
                 const mvpMatrixFromLight = new WebGLMVPMatrixWrapper();
                 mvpMatrixFromLight.projectionType = "orthogonal";
                 const sphere = Sphere.fromCube(dem.cube);
                 mvpMatrixFromLight.initializeByBoundSphere(sphere, OFFSCREEN_WIDTH /
                     OFFSCREEN_HEIGHT);
-                mvpMatrixFromLight.view.origin = lightDirection.elements.map((e) =>
-                    e * sphere.radius * 2.1
-                );
+
+                function setLight() {
+                    const theta = parseInt(document.querySelector(".setting-item[name='垂直角'] input").value,
+                        10);
+                    const phi = parseInt(document.querySelector(".setting-item[name='水平角'] input").value,
+                        10);
+                    const lightDirection = getLight(theta, phi);
+                    mvpMatrixFromLight.view.origin = lightDirection.elements.map((e) =>
+                        e * sphere.radius * 2.1
+                    );
+                    drawProgram.use();
+                    gl.uniformMatrix4fv(drawProgram.u_mvpMatrixFromLight, false, mvpMatrixFromLight.matrix
+                        .elements)
+                    frameProgram.use();
+                    // 设置为光源坐标系
+                    gl.uniformMatrix4fv(frameProgram.u_mvpMatrix, false, mvpMatrixFromLight.matrix.elements)
+                }
+                window.setLight = setLight;
+                const lightDirection = getLight(30, 315);
+
                 const vertices = await dem.loadTexture(gl, dem_texture_image, {
                     id: 0,
                     with_normal: true
@@ -193,16 +223,12 @@
                 gl.uniform3fv(drawProgram.u_lightDirection, lightDirection.elements);
                 // 环境光颜色
                 gl.uniform3f(drawProgram.u_ambientLight, 0.2, 0.2, 0.2);
-                debugger
-                gl.uniformMatrix4fv(drawProgram.u_mvpMatrixFromLight, false, mvpMatrixFromLight.matrix
-                    .elements)
+
                 frameProgram.use();
 
                 vertexBuffer.bindAttibute(frameProgram.a_Position, 3, gl.FLOAT);
-                // 设置为光源坐标系
-                gl.uniformMatrix4fv(frameProgram.u_mvpMatrix, false, mvpMatrixFromLight.matrix.elements)
-
                 vertexBuffer.unbind();
+                setLight();
                 return elementsBuffer.size;
             }
         }
